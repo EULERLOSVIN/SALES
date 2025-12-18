@@ -1,0 +1,39 @@
+name: Pipeline CI
+
+on:
+  push:
+    # Se mantiene la rama master según tu flujo de trabajo
+    branches: [ "master" ]
+
+jobs:
+  probar-y-subir:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Bajar código
+      uses: actions/checkout@v3
+    
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 9.0.x
+        
+    - name: Ejecutar Tests
+      # Ejecutará las pruebas unitarias del proyecto SALES.Tests.Unit
+      run: dotnet test 
+
+    - name: Login en Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+          
+    - name: Construir y Subir Imagen de Ventas
+      uses: docker/build-push-action@v4
+      with:
+        # Contexto raíz para ver los 6 proyectos de la solución SALES
+        context: .
+        # RUTA ADAPTADA: Apunta al Dockerfile dentro de SALES.API
+        file: ./SALES.API/Dockerfile 
+        push: true
+        # TAG ADAPTADO: Repositorio único para el servicio de ventas
+        tags: ${{ secrets.DOCKER_USERNAME }}/sales-api:latest

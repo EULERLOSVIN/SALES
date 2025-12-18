@@ -1,0 +1,50 @@
+name: Desplegar a AWS y K8s
+
+on:
+  workflow_run:
+    workflows: ["Pipeline CI"]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  despliegue:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Descargar código
+      uses: actions/checkout@v3
+
+    - name: Configurar credenciales de AWS
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Actualizar Kubeconfig
+      # Conexión al clúster compartido existente
+      run: aws eks update-kubeconfig --name microservicios-cluster --region us-east-1
+
+    - name: Desplegar en Kubernetes
+      run: |
+        # Aplica el deployment.yml de la raíz de SALES
+        kubectl apply -f ./deployment.yml
+        
+        # Reinicia el deployment específico de ventas
+        kubectl rollout restart deployment sales-api
+
+    - name: Obtener URL del Servidor
+      run: |
+        echo "Esperando a que AWS asigne la URL pública para Ventas..."
+        sleep 25 
+        
+        # Extraer el hostname del servicio 'sales-service'
+        URL=$(kubectl get service sales-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        echo "------------------------------------------------------"
+        echo "URL DE ACCESO VENTAS: http://$URL/swagger"
+        echo "------------------------------------------------------"
+        
+        # Publicar en el resumen de GitHub Actions
+        echo "### 🚀 Despliegue de Ventas Exitoso" >> $GITHUB_STEP_SUMMARY
+        echo "La API de Ventas está disponible en: [http://$URL/swagger](http://$URL/swagger)" >> $GITHUB_STEP_SUMMARY

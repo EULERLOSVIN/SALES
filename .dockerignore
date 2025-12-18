@@ -1,0 +1,19 @@
+# Ignorar carpetas de compilación local
+**/bin
+**/obj
+**/.vs
+**/.vscode
+
+# Ignorar archivos de Git y Docker
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# Ignorar archivos de Terraform para que no pesen en la imagen
+.terraform/
+terraform.tfstate*
+
+# Archivos de configuración local de Visual Studio
+**/*.user
+**/*.suo
